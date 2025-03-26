@@ -38,7 +38,7 @@ final class DocteurController extends AbstractController
         $em->persist($docteur);
         $em->flush();
 
-        $location = $urlGenerator->generate('detailDocteur', ['id' => $docteur->getId()]);
+        $location = $urlGenerator->generate('app_docteur_show', ['id' => $docteur->getId()]);
 
         $jsonDocteur = $serializer->serialize($docteur, 'json', ['groups' => 'getDocteur']);
         return new JsonResponse($jsonDocteur, Response::HTTP_CREATED, ["Location"=>$location], true);
@@ -51,5 +51,33 @@ final class DocteurController extends AbstractController
         $em->flush();
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
-    
+    #[Route('/api/docteur/response/rendezVous', name: 'app_docteur_response_rendezVous', methods:['POST'])]
+    public function postDocteurResponseRendezVous(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator): JsonResponse
+    {
+        $docteur = $serializer->deserialize($request->getContent(), Docteur::class, 'json');
+        $em->persist($docteur);
+        $em->flush();
+
+        $location = $urlGenerator->generate('app_docteur_show', ['id' => $docteur->getId()]);
+
+        $jsonDocteur = $serializer->serialize($docteur, 'json', ['groups' => 'getRendezvous']);
+        return new JsonResponse($jsonDocteur, Response::HTTP_CREATED, ["Location"=>$location], true);
+    }
+
+    #[Route('/api/docteur/response/rendezVous', name: 'app_docteur_response_rendezVous', methods:['GET'])]
+    public function getDocteurResponseRendezVous(DocteurRepository $docteurRepository, SerializerInterface $serializer): JsonResponse
+    {
+        $docteurs = $docteurRepository->findAll();
+        $jsonDocteur = $serializer->serialize($docteurs, 'json', ['groups' => 'getRendezvous']);
+        return new JsonResponse($jsonDocteur, Response::HTTP_OK, [], true);
+    }
+
+    #[Route('/api/docteur/response/rendezVous/{id}', name: 'app_docteur_response_rendezVous_show', methods:['GET'])]
+    public function showDocteurResponseRendezVous(Docteur $docteur, SerializerInterface $serializer): JsonResponse
+    {
+        $jsonDocteur = $serializer->serialize($docteur, 'json', ['groups' => 'getRendezvous']);
+        return new JsonResponse($jsonDocteur, Response::HTTP_OK, [], true);
+    }
 }
+    
+

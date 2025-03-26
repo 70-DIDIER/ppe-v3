@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: SpecialiteRepository::class)]
 class Specialite
@@ -14,17 +15,18 @@ class Specialite
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(["getDocteur"])]
+    #[Groups(["getSpecialite"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getDocteur"])]
+    #[Groups(["getDocteur", "getSpecialite"])]
     private ?string $nom = null;
 
     /**
      * @var Collection<int, Docteur>
      */
     #[ORM\ManyToMany(targetEntity: Docteur::class, inversedBy: 'specialites')]
+    #[Ignore]
     private Collection $docteur;
 
     public function __construct()

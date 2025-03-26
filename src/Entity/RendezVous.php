@@ -5,6 +5,8 @@ namespace App\Entity;
 use App\Repository\RendezVousRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
 class RendezVous
@@ -15,19 +17,32 @@ class RendezVous
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["getRendezVous", "getDocteur", "getPatient"])]
     private ?string $description = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["getRendezVous", "getDocteur", "getPatient"])]
     private ?string $typeConsultation = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(["getRendezVous", "getDocteur", "getPatient"])]
     private ?\DateTimeImmutable $dateConsultationAt = null;
 
     #[ORM\Column(type: Types::TIME_IMMUTABLE, nullable: true)]
+    #[Groups(["getRendezVous", "getDocteur", "getPatient"])]
     private ?\DateTimeImmutable $heureConsultation = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["getRendezVous", "getDocteur", "getPatient"])]
     private ?string $statut = null;
+
+    #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
+    #[Groups(["getRendezVous"])]
+    private ?Docteur $docteur = null;
+
+    #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
+    #[Groups(["getRendezVous"])]
+    private ?Patient $patient = null;
 
     public function getId(): ?int
     {
@@ -90,6 +105,30 @@ class RendezVous
     public function setStatut(string $statut): static
     {
         $this->statut = $statut;
+
+        return $this;
+    }
+
+    public function getDocteur(): ?Docteur
+    {
+        return $this->docteur;
+    }
+
+    public function setDocteur(?Docteur $docteur): static
+    {
+        $this->docteur = $docteur;
+
+        return $this;
+    }
+
+    public function getPatient(): ?Patient
+    {
+        return $this->patient;
+    }
+
+    public function setPatient(?Patient $patient): static
+    {
+        $this->patient = $patient;
 
         return $this;
     }

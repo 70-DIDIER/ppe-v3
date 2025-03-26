@@ -7,6 +7,7 @@ use App\Repository\DocteurRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: DocteurRepository::class)]
 class Docteur
@@ -18,15 +19,15 @@ class Docteur
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getDocteur"])]
+    #[Groups(["getDocteur", "getRendezvous"])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getDocteur"])]
+    #[Groups(["getDocteur", "getRendezvous"])]
     private ?string $prenom = null;
 
     #[ORM\Column]
-    #[Groups(["getDocteur"])]
+    #[Groups(["getDocteur", "getRendezvous"])]
     private ?int $telephone = null;
 
     /**
@@ -36,9 +37,17 @@ class Docteur
     #[Groups(["getDocteur"])]
     private Collection $specialites;
 
+    /**
+     * @var Collection<int, RendezVous>
+     */
+    #[ORM\OneToMany(targetEntity: RendezVous::class, mappedBy: 'docteur')]
+    #[Ignore]
+    private Collection $rendezVouses;
+
     public function __construct()
     {
         $this->specialites = new ArrayCollection();
+        $this->rendezVouses = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -104,6 +113,36 @@ class Docteur
     {
         if ($this->specialites->removeElement($specialite)) {
             $specialite->removeDocteur($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RendezVous>
+     */
+    public function getRendezVouses(): Collection
+    {
+        return $this->rendezVouses;
+    }
+
+    public function addRendezVouse(RendezVous $rendezVouse): static
+    {
+        if (!$this->rendezVouses->contains($rendezVouse)) {
+            $this->rendezVouses->add($rendezVouse);
+            $rendezVouse->setDocteur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRendezVouse(RendezVous $rendezVouse): static
+    {
+        if ($this->rendezVouses->removeElement($rendezVouse)) {
+            // set the owning side to null (unless already changed)
+            if ($rendezVouse->getDocteur() === $this) {
+                $rendezVouse->setDocteur(null);
+            }
         }
 
         return $this;

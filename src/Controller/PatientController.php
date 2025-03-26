@@ -15,7 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 final class PatientController extends AbstractController
 {
-    #[Route('/api/patient', name: 'app_patient', methods:['GET'])]
+    #[Route('/api/patients', name: 'app_patient', methods:['GET'])]
            public function ListePatient(PatientRepository $patient, SerializerInterface $serializer): JsonResponse
     {
         $patients = $patient->findAll();
@@ -26,7 +26,7 @@ final class PatientController extends AbstractController
     #[Route('/api/patient/{id}', name: 'app_patient_show', methods:['GET'])]
     public function show(Patient $patient, SerializerInterface $serializer): JsonResponse
     {
-        $jsonPatient = $serializer->serialize($patient, 'json', ['groups' => 'getDocteur']);
+        $jsonPatient = $serializer->serialize($patient, 'json',);
         return new JsonResponse($jsonPatient, Response::HTTP_OK, [], true);
     }
 
@@ -37,9 +37,9 @@ final class PatientController extends AbstractController
         $em->persist($patient);
         $em->flush();
 
-        $location = $urlGenerator->generate('detailPatient', ['id' => $patient->getId()]);
+        $location = $urlGenerator->generate('app_patient_show', ['id' => $patient->getId()]);
 
-        $jsonPatient = $serializer->serialize($patient, 'json', ['groups' => 'getDocteur']);
+        $jsonPatient = $serializer->serialize($patient, 'json');
         return new JsonResponse($jsonPatient, Response::HTTP_CREATED, ["Location"=>$location], true);
     }
 

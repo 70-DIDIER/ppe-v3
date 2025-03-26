@@ -15,7 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 final class SpecialiteController extends AbstractController
 {
-    #[Route('/api/specialite', name: 'app_specialite', methods:['GET'])]
+    #[Route('/api/specialites', name: 'app_specialite', methods:['GET'])]
     public function ListeSpecialite(SpecialiteRepository $specialite,SerializerInterface $serializer): JsonResponse
     {
 
@@ -38,7 +38,7 @@ final class SpecialiteController extends AbstractController
         $em->persist($specialite);
         $em->flush();
 
-        $location = $urlGenerator->generate('detailSpecialite', ['id' => $specialite->getId()]);
+        $location = $urlGenerator->generate('app_specialite_show', ['id' => $specialite->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $jsonSpecialite = $serializer->serialize($specialite, 'json', ['groups' => 'getDocteur']);
         return new JsonResponse($jsonSpecialite, Response::HTTP_CREATED, ["Location"=>$location], true);
