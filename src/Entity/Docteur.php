@@ -44,10 +44,17 @@ class Docteur
     #[Ignore]
     private Collection $rendezVouses;
 
+    /**
+     * @var Collection<int, Notification>
+     */
+    #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'docteur')]
+    private Collection $notifications;
+
     public function __construct()
     {
         $this->specialites = new ArrayCollection();
         $this->rendezVouses = new ArrayCollection();
+        $this->notifications = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -142,6 +149,36 @@ class Docteur
             // set the owning side to null (unless already changed)
             if ($rendezVouse->getDocteur() === $this) {
                 $rendezVouse->setDocteur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Notification>
+     */
+    public function getNotifications(): Collection
+    {
+        return $this->notifications;
+    }
+
+    public function addNotification(Notification $notification): static
+    {
+        if (!$this->notifications->contains($notification)) {
+            $this->notifications->add($notification);
+            $notification->setDocteur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotification(Notification $notification): static
+    {
+        if ($this->notifications->removeElement($notification)) {
+            // set the owning side to null (unless already changed)
+            if ($notification->getDocteur() === $this) {
+                $notification->setDocteur(null);
             }
         }
 

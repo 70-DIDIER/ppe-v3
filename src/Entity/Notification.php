@@ -22,6 +22,15 @@ class Notification
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $statut = null;
 
+    #[ORM\ManyToOne(inversedBy: 'notifications')]
+    private ?Docteur $docteur = null;
+
+    #[ORM\ManyToOne(inversedBy: 'notifications')]
+    private ?Patient $patient = null;
+
+    #[ORM\Column]
+    private ?\DateTimeImmutable $dateHeureAt = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -59,6 +68,42 @@ class Notification
     public function setStatut(?string $statut): static
     {
         $this->statut = $statut;
+
+        return $this;
+    }
+
+    public function getDocteur(): ?Docteur
+    {
+        return $this->docteur;
+    }
+
+    public function setDocteur(?Docteur $docteur): static
+    {
+        $this->docteur = $docteur;
+
+        return $this;
+    }
+
+    public function getPatient(): ?Patient
+    {
+        return $this->patient;
+    }
+
+    public function setPatient(?Patient $patient): static
+    {
+        $this->patient = $patient;
+
+        return $this;
+    }
+
+    public function getDateHeureAt(): ?\DateTimeImmutable
+    {
+        return $this->dateHeureAt;
+    }
+
+    public function setDateHeureAt(\DateTimeImmutable $dateHeureAt): static
+    {
+        $this->dateHeureAt = $dateHeureAt;
 
         return $this;
     }
