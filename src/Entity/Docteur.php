@@ -48,6 +48,7 @@ class Docteur
      * @var Collection<int, Notification>
      */
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'docteur')]
+    #[Ignore]
     private Collection $notifications;
 
     public function __construct()

@@ -15,7 +15,7 @@ class Specialite
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(["getSpecialite"])]
+    #[Groups(["getDocteur", "getSpecialite"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]

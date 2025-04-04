@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\User;
 use App\Entity\Docteur;
 use App\Entity\Patient;
 use App\Entity\RendezVous;
@@ -9,12 +10,25 @@ use App\Entity\Specialite;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
 class AppFixtures extends Fixture
 {
+    private UserPasswordHasherInterface $userPasswordHasher;
+
+    public function __construct(UserPasswordHasherInterface $userPasswordHasher)
+    {
+        $this->userPasswordHasher = $userPasswordHasher;
+    }
+
     public function load(ObjectManager $manager): void
     {
-        // Initialiser la liste des spécialités
-        $listeSpecialites = [];
+        // créer un administrateur
+        $adminUser= new User();
+        $adminUser->setEmail("admin@myhospital.com");
+        $adminUser->setRoles(["ROLE_ADMIN"]);
+        $adminUser->setPassword($this->userPasswordHasher->hashPassword($adminUser, "adminpassword"));
+        $manager->persist($adminUser);
 
         // Créer quelques spécialités pour les docteurs
         $specialites = ['Cardiologie', 'Orthopédie', 'Gastro-entérologie', 'Pneumologie', 'Gynécologie'];

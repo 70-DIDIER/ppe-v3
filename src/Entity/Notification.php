@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\NotificationRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: NotificationRepository::class)]
 class Notification
@@ -14,18 +15,23 @@ class Notification
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(["getNotification"])]
     private ?string $message = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(["getNotification"])]
     private ?string $type = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(["getNotification"])]
     private ?string $statut = null;
 
     #[ORM\ManyToOne(inversedBy: 'notifications')]
+    #[Groups(["getNotification"])]
     private ?Docteur $docteur = null;
 
     #[ORM\ManyToOne(inversedBy: 'notifications')]
+    #[Groups(["getNotification"])]
     private ?Patient $patient = null;
 
     #[ORM\Column]

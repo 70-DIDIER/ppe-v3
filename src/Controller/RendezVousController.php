@@ -59,6 +59,8 @@ final class RendezVousController extends AbstractController
         $heure = \DateTime::createFromFormat('H:i:s', $data['heureRendezVous']);
         $rendezVous->setHeureConsultation($heure ? \DateTimeImmutable::createFromMutable($heure) : null);
         $rendezVous->setDescription($data['descriptionRendezVous']);
+        $rendezVous->setTypeConsultation($data['type_consultation'] ?? "à l'hôpital");
+        $rendezVous->setStatut("en attente");
         $rendezVous->setDocteur($docteur);
         $rendezVous->setPatient($patient);
     
@@ -127,8 +129,7 @@ final class RendezVousController extends AbstractController
        SerializerInterface $serializer
    ): JsonResponse {
        try {
-        $data = $request->getContent();
-        $rendezVous = $serializer->deserialize($data, RendezVous::class, 'json');
+        $data = json_decode($request->getContent(), true);
        } catch (\Exception $e) {
            return new JsonResponse(['error' => 'Données invalides ou mal formatées'], Response::HTTP_INTERNAL_SERVER_ERROR);
        }
@@ -143,7 +144,7 @@ final class RendezVousController extends AbstractController
        if (!$rendezVous) {
            return new JsonResponse(['error' => 'Rendez-vous non trouvé'], Response::HTTP_NOT_FOUND);
        }
-   
+
        $patient = $rendezVous->getPatient();
        $docteur = $rendezVous->getDocteur();
    
@@ -151,10 +152,14 @@ final class RendezVousController extends AbstractController
            if (!isset($data['dateHeure'])) {
                return new JsonResponse(['error' => 'La date et l\'heure sont requises pour accepter un rendez-vous'], 400);
            }
-           $rendezVous->setDateConsultation(new \DateTime($data['dateHeure']));
+           $date = new \DateTime($data['dateHeure']);
+           $rendezVous->setDateConsultationAt(\DateTimeImmutable::createFromMutable($date));
+           $rendezVous->setHeureConsultation(\DateTimeImmutable::createFromMutable($date));
+           $rendezVous->setStatut($data['statut']);
+
            $message = "Votre rendez-vous avec le Dr. " . $docteur->getNom() . " est confirmé pour le " . $data['dateHeure'];
        } else {
-           $message = "Votre demande de rendez-vous avec le Dr. " . $docteur->getNom() . " a été refusée.";
+           $message = "Votre demande de rendez-vous avec le Dr. " . $docteur->getNom() . " a été refusée, par manque de disponibilité.";
        }
    
        $entityManager->persist($rendezVous);
