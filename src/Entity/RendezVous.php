@@ -11,6 +11,9 @@ use Symfony\Component\Serializer\Annotation\Ignore;
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
 class RendezVous
 {
+    const STATUT_ENATTENTE = "En attente";
+    const STATUT_ACCEPTE = "Accepté";
+    const STATUT_REFUSE = "Refusé";
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

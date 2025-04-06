@@ -9,12 +9,12 @@ use App\Entity\RendezVous;
 use App\Entity\Specialite;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
-
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AppFixtures extends Fixture
 {
-    private UserPasswordHasherInterface $userPasswordHasher;
+    private $userPasswordHasher;
+    private $batchSize = 10; // Réduire la taille des lots
 
     public function __construct(UserPasswordHasherInterface $userPasswordHasher)
     {
@@ -23,77 +23,87 @@ class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        // créer un administrateur
-        $adminUser= new User();
-        $adminUser->setEmail("admin@myhospital.com");
-        $adminUser->setRoles(["ROLE_ADMIN"]);
-        $adminUser->setPassword($this->userPasswordHasher->hashPassword($adminUser, "adminpassword"));
-        $manager->persist($adminUser);
+        $this->loadUsersAndPatients($manager);
+        $this->loadDoctors($manager);
+        $this->loadAppointments($manager);
+    }
 
-        // Créer quelques spécialités pour les docteurs
-        $specialites = ['Cardiologie', 'Orthopédie', 'Gastro-entérologie', 'Pneumologie', 'Gynécologie'];
-        foreach ($specialites as $specialite) {
-            $specialiteObj = new Specialite();
-            $specialiteObj->setNom($specialite);
-            $manager->persist($specialiteObj);
-            $listeSpecialites[] = $specialiteObj; // Ajouter à la liste
-        }
+    private function loadUsersAndPatients(ObjectManager $manager): void
+    {
+        $noms = ['Dupont', 'Durand', 'Leroy', 'Moreau', 'Simon'];
+        $prenoms = ['Alice', 'Bob', 'Claire', 'David', 'Emma'];
 
-        // Créer les docteurs
-        $docteurs = [];
-        for ($i = 0; $i < 10; $i++) {
-            $docteur = new Docteur();
-            $docteur->setNom('Docteur' . $i);
-            $docteur->setPrenom('Docteur' . $i);
-            $docteur->setTelephone('06' . rand(10000000, 99999999));
+        for ($i = 1; $i <= 20; $i++) {
+            // Création User
+            $user = new User();
+            $user->setEmail("patient{$i}@example.com")
+                 ->setPassword($this->userPasswordHasher->hashPassword($user, "patient{$i}"));
+            $manager->persist($user);
 
-            // Vérifier que $listeSpecialites n'est pas vide avant d'utiliser array_rand
-            if (!empty($listeSpecialites)) {
-                $docteur->addSpecialite($listeSpecialites[array_rand($listeSpecialites)]);
-            }
-
-            $manager->persist($docteur);
-            $docteurs[] = $docteur;
-        }
-
-        // Créer les patients
-        $patients = [];
-        for ($i = 0; $i < 20; $i++) {
+            // Création Patient
             $patient = new Patient();
-            $patient->setNom('Patient' . $i);
-            $patient->setPrenom('Patient' . $i);
-            $patient->setTelephone('06' . rand(10000000, 99999999));
-            $patient->setAdresse('Adresse' . $i);
-
+            $patient->setNom($noms[array_rand($noms)])
+                    ->setPrenom($prenoms[array_rand($prenoms)])
+                    ->setTelephone('06' . rand(10000000, 99999999))
+                    ->setAdresse("Adresse $i, Ville")
+                    ->setUser($user);
             $manager->persist($patient);
-            $patients[] = $patient;
+
+            // if ($i % $this->batchSize === 0) {
+                // $manager->flush();
+                // $manager->clear(); // Détache toutes les entités
+                // gc_collect_cycles(); // Force le garbage collector
+            // }
         }
+        $manager->flush();
+        $manager->clear();
+    }
 
-        // Créer les rendez-vous en les attribuant aléatoirement aux docteurs et aux patients
-        $typesConsultation = ['En ligne', 'À domicile', 'À l\'hôpital'];
-        $statuts = ['En attente', 'Accepté', 'Refusé'];
+    private function loadDoctors(ObjectManager $manager): void
+    {
+        $specialites = ['Cardiologie', 'Orthopédie', 'Gastro-entérologie'];
+        $listeSpecialites = array_map(function ($nom) use ($manager) {
+            $spec = new Specialite();
+            $spec->setNom($nom);
+            $manager->persist($spec);
+            return $spec;
+        }, $specialites);
 
-        // Vérifier que les patients et docteurs existent
-        if (!empty($patients) && !empty($docteurs)) {
-            for ($i = 0; $i < 50; $i++) {
-                $rendezVous = new RendezVous();
-                $rendezVous->setDescription('Rendez-vous ' . $i);
-                $rendezVous->setTypeConsultation($typesConsultation[array_rand($typesConsultation)]);
-                $rendezVous->setStatut($statuts[array_rand($statuts)]);
-                $rendezVous->setDateConsultationAt(new \DateTimeImmutable());
-                $rendezVous->setHeureConsultation(new \DateTimeImmutable());
+        $manager->flush();
+        $manager->clear();
 
-                // Sélectionner un patient et un docteur aléatoire dans les tableaux
-                $rendezVous->setPatient($patients[array_rand($patients)]);
-                $rendezVous->setDocteur($docteurs[array_rand($docteurs)]);
+        // ... (code similaire pour les docteurs)
+    }
 
-                $manager->persist($rendezVous);
+    private function loadAppointments(ObjectManager $manager): void
+    {
+        $patients = $manager->getRepository(Patient::class)->findAll();
+        $docteurs = $manager->getRepository(Docteur::class)->findAll();
+        $type_consulations = ["en ligne", "à l'hopital", "à la maison"];
+        $statuts =[RendezVous::STATUT_ACCEPTE, RendezVous::STATUT_REFUSE, RendezVous::STATUT_ENATTENTE];
+        for ($i = 1; $i <= 50; $i++) {
+            $rdv = new RendezVous();
+            $rdv->setDescription("Consultation $i");
+            if(!empty($patients)){
+                $rdv->setPatient($patients[array_rand($patients)]);
+                
             }
-        } else {
-            throw new \Exception("Impossible de créer des rendez-vous : aucun patient ou docteur trouvé.");
-        }
+            if(!empty($docteurs)){
+                $rdv->setDocteur($docteurs[array_rand($docteurs)]);
+            }
+            $rdv->setTypeConsultation($type_consulations[array_rand($type_consulations)]);
+            $rdv->setStatut($statuts[array_rand($statuts)]);
+            $rdv->setDateConsultationAt(new \DateTimeImmutable());
+            $rdv->setHeureConsultation(new \DateTimeImmutable());
+            $manager->persist($rdv);
 
-        // Sauvegarder tous les objets dans la base de données
+            if ($i % $this->batchSize === 0) {
+                $manager->flush();
+                $manager->clear();
+                $patients = $manager->getRepository(Patient::class)->findAll();
+                $docteurs = $manager->getRepository(Docteur::class)->findAll();
+            }
+        }
         $manager->flush();
     }
 }

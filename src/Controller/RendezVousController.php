@@ -27,53 +27,76 @@ final class RendezVousController extends AbstractController
     #[Route('/api/rendezVous', name:"app_create_rendezVous", methods: ['POST'])]
     public function createRendezVous(
         Request $request, 
-        SerializerInterface $serializer, 
         EntityManagerInterface $em, 
-        UrlGeneratorInterface $urlGenerator, 
         DocteurRepository $docteurRepository, 
         PatientRepository $patientRepository
     ): JsonResponse 
     {
         $data = json_decode($request->getContent(), true);
     
-        // Vérifie si les champs essentiels sont bien fournis
-        if (!isset($data['dateRendezVous'], $data['docteur'], $data['patient'])) {
-            return new JsonResponse(['error' => 'Données manquantes'], Response::HTTP_BAD_REQUEST);
+        // Validation renforcée
+        $requiredFields = ['dateRendezVous', 'heureRendezVous', 'docteur', 'patient'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                return new JsonResponse(
+                    ['error' => 'Le champ "' . $field . '" est requis'], 
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
         }
     
-        // Récupère les entités Docteur et Patient
-        $docteur = $docteurRepository->find($data['docteur']);
-        $patient = $patientRepository->find($data['patient']);
+        // Conversion explicite en integer
+        $docteur = $docteurRepository->find((int)$data['docteur']);
+        $patient = $patientRepository->find((int)$data['patient']);
     
-        if (!$docteur || !$patient) {
-            return new JsonResponse(['error' => 'Docteur ou patient introuvable'], Response::HTTP_NOT_FOUND);
+        if (!$docteur) {
+            return new JsonResponse(
+                ['error' => 'Docteur introuvable (ID: ' . $data['docteur'] . ')'], 
+                Response::HTTP_NOT_FOUND
+            );
         }
     
-        // Création de l'objet RendezVous
-        $rendezVous = new RendezVous();
-        $date = \DateTime::createFromFormat('Y-m-d', $data['dateRendezVous']);
-        if ($date === false) {
-            return new JsonResponse(['error' => 'Format de date invalide'], Response::HTTP_BAD_REQUEST);
+        if (!$patient) {
+            return new JsonResponse(
+                ['error' => 'Patient introuvable (ID: ' . $data['patient'] . ')'], 
+                Response::HTTP_NOT_FOUND
+            );
         }
-        $rendezVous->setDateConsultationAt(\DateTimeImmutable::createFromMutable($date));
-        $heure = \DateTime::createFromFormat('H:i:s', $data['heureRendezVous']);
-        $rendezVous->setHeureConsultation($heure ? \DateTimeImmutable::createFromMutable($heure) : null);
-        $rendezVous->setDescription($data['descriptionRendezVous']);
-        $rendezVous->setTypeConsultation($data['type_consultation'] ?? "à l'hôpital");
-        $rendezVous->setStatut("en attente");
-        $rendezVous->setDocteur($docteur);
-        $rendezVous->setPatient($patient);
     
-        $em->persist($rendezVous);
-        $em->flush();
+        // Gestion des dates
+        try {
+            $dateTime = \DateTime::createFromFormat(
+                'Y-m-d H:i:s', 
+                $data['dateRendezVous'] . ' ' . $data['heureRendezVous']
+            );
+            
+            if (!$dateTime) {
+                throw new \Exception('Format de date/heure invalide');
+            }
     
-        // Notification du docteur
-        $this->notificationService->notifierDocteur($docteur, "Un patient veut prendre un rendez-vous avec vous.");
+            $rendezVous = new RendezVous();
+            $rendezVous->setDateConsultationAt(\DateTimeImmutable::createFromMutable($dateTime));
+            $rendezVous->setHeureConsultation(\DateTimeImmutable::createFromMutable($dateTime));
+            $rendezVous->setDescription($data['descriptionRendezVous'] ?? '');
+            $rendezVous->setTypeConsultation($data['typeConsultation'] ?? "à l'hôpital");
+            $rendezVous->setStatut("en attente");
+            $rendezVous->setDocteur($docteur);
+            $rendezVous->setPatient($patient);
     
-        $jsonRendezVous = $serializer->serialize($rendezVous, 'json', ['groups' => 'getRendezVous']);
-        $location = $urlGenerator->generate('app_rendezvous_show', ['id' => $rendezVous->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+            $em->persist($rendezVous);
+            $em->flush();
     
-        return new JsonResponse($jsonRendezVous, Response::HTTP_CREATED, ["Location" => $location], true);
+        } catch (\Exception $e) {
+            return new JsonResponse(
+                ['error' => 'Erreur de traitement: ' . $e->getMessage()], 
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    
+        return new JsonResponse(
+            ['message' => 'Rendez-vous créé avec succès', 'id' => $rendezVous->getId()],
+            Response::HTTP_CREATED
+        );
     }
     
 

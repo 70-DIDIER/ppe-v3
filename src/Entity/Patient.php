@@ -3,11 +3,13 @@
 namespace App\Entity;
 
 use App\Repository\PatientRepository;
+use App\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Attribute\Groups as AttributeGroups;
 
 #[ORM\Entity(repositoryClass: PatientRepository::class)]
 class Patient
@@ -25,11 +27,11 @@ class Patient
     #[Groups(["getPatient", "getRendezVous"])]
     private ?string $prenom = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable:true)]
     #[Groups(["getPatient", "getRendezVous"])]
     private ?string $adresse = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable:true)]
     #[Groups(["getPatient", "getRendezVous"])]
     private ?int $telephone = null;
 
@@ -46,6 +48,9 @@ class Patient
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'patient')]
     #[Ignore]
     private Collection $notifications;
+
+    #[ORM\OneToOne(inversedBy: 'patient', cascade: ['persist', 'remove'])]
+    private ?User $user = null;
 
     public function __construct()
     {
@@ -165,4 +170,18 @@ class Patient
 
         return $this;
     }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+    
+    
 }
