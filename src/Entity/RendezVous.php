@@ -7,6 +7,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Attribute\Groups as AttributeGroups;
 
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
 class RendezVous
@@ -44,7 +45,7 @@ class RendezVous
     private ?Docteur $docteur = null;
 
     #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
-    #[Ignore]
+    #[Groups(["getRendezVous", "getPatient"])]
     private ?Patient $patient = null;
 
     public function getId(): ?int
