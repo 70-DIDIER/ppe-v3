@@ -18,6 +18,7 @@ class RendezVous
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["getRendezVous"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]

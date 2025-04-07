@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Docteur;
 use App\Entity\Patient;
 use App\Entity\RendezVous;
+use App\Entity\Notification;
 use App\Service\NotificationService;
 use App\Repository\DocteurRepository;
 use App\Repository\PatientRepository;
@@ -287,15 +288,64 @@ public function mesRendezVous(EntityManagerInterface $em): JsonResponse
         }
 
         $data = json_decode($request->getContent(), true);
-        
-        if (isset($data['statut'])) $rdv->setStatut($data['statut']);
-        if (isset($data['dateConsultationAt'])) $rdv->setDateConsultationAt(new \DateTime($data['dateConsultationAt']));
-        if (isset($data['heureConsultation'])) $rdv->setHeureConsultation(new \DateTime($data['heureConsultation']));
+
+        if (isset($data['statut'])) {
+            $rdv->setStatut($data['statut']);
+        }
+
+        try {
+            if (isset($data['dateConsultationAt'])) {
+                try {
+                    $rdv->setDateConsultationAt(new \DateTimeImmutable($data['dateConsultationAt']));
+                } catch (\Exception $e) {
+                    return $this->json(['error' => 'Format de date invalide.'], 400);
+                }
+            }
+            
+            if (isset($data['heureConsultation'])) {
+                try {
+                    $time = \DateTimeImmutable::createFromFormat('H:i', $data['heureConsultation']);
+                    if (!$time) {
+                        throw new \RuntimeException("Format d'heure invalide");
+                    }
+                    $rdv->setHeureConsultation($time);
+                } catch (\Exception $e) {
+                    return $this->json(['error' => 'Format d\'heure invalide.'], 400);
+                }
+            }
+
+            $patient = $rdv->getPatient();
+        $message = '';
+
+        if ($data['statut'] === 'accepté') {
+            $date = $rdv->getDateConsultationAt()?->format('Y-m-d');
+            $heure = $rdv->getHeureConsultation()?->format('H:i');
+            $message = "Votre rendez-vous a été accepté pour le {$date} à {$heure}.";
+        } elseif ($data['statut'] === 'refusé') {
+            $message = "Votre rendez-vous a été refusé.";
+        }
+
+        if ($message && $patient) {
+            $notification = new Notification();
+            $notification->setPatient($patient);
+            $notification->setMessage($message);
+            $notification->setDateHeureAt(new \DateTimeImmutable());
+            $em->persist($notification);
+        }
 
         $em->flush();
 
-        return $this->json(['message' => 'Rendez-vous mis à jour.']);
-}
+            $em->flush();
+
+            return $this->json($rdv, 200, [], ['groups' => 'getRendezVous']);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Erreur lors de la mise à jour',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 
    
 
