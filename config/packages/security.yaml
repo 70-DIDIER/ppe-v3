@@ -40,9 +40,15 @@ security:
     # Note: Only the *first* access control that matches will be used
     access_control:
         # - { path: ^/api/login, roles: PUBLIC_ACCESS }
-        # - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        # - { path: ^/api/register, roles: PUBLIC_ACCESS }
+        # # Exemple de route accessible uniquement aux utilisateurs connectés
+        # - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+        # # Exemple de route accessible uniquement aux admins
+        # - { path: ^/api/admin, roles: ROLE_ADMIN }
+        # # Exemple de route accessible uniquement aux docteurs
+        # - { path: ^/api/docteur, roles: ROLE_DOCTEUR }
+        # # Exemple de route accessible uniquement aux patients
+        # - { path: ^/api/patient, roles: ROLE_PATIENT }
 
 when@test:
     security:

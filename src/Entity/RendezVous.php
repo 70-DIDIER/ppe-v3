@@ -44,7 +44,7 @@ class RendezVous
     private ?Docteur $docteur = null;
 
     #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
-    #[Groups(["getRendezVous"])]
+    #[Ignore]
     private ?Patient $patient = null;
 
     public function getId(): ?int
