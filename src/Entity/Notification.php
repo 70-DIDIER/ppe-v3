@@ -12,6 +12,7 @@ class Notification
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["getNotification"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
@@ -27,14 +28,13 @@ class Notification
     private ?string $statut = null;
 
     #[ORM\ManyToOne(inversedBy: 'notifications')]
-    #[Groups(["getNotification"])]
     private ?Docteur $docteur = null;
 
     #[ORM\ManyToOne(inversedBy: 'notifications')]
-    #[Groups(["getNotification"])]
     private ?Patient $patient = null;
 
     #[ORM\Column]
+    #[Groups(["getNotification"])]
     private ?\DateTimeImmutable $dateHeureAt = null;
 
     public function getId(): ?int

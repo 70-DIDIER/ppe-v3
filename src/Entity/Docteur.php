@@ -48,7 +48,7 @@ class Docteur
      * @var Collection<int, Notification>
      */
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'docteur')]
-    #[Ignore]
+    #[Groups(["getNotification"])]
     private Collection $notifications;
 
     #[ORM\OneToOne(inversedBy: 'docteur', cascade: ['persist', 'remove'])]
