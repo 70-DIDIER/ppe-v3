@@ -97,6 +97,17 @@ final class RendezVousController extends AbstractController
             $em->persist($notification);
             $em->flush();
 
+            // notifier le docteur
+            $messageDocteur = "Vous avez une nouvelle demande de rendez-vous de la part de " . $patient->getUser()->getEmail() . ".";
+            $notificationDocteur = new Notification();
+            $notificationDocteur->setDocteur($docteur);
+            $notificationDocteur->setMessage($messageDocteur);
+            $notificationDocteur->setDateHeureAt(new \DateTimeImmutable());
+            $notificationDocteur->setType("demande_rendezVous");
+            $notificationDocteur->setStatut(false);
+            $em->persist($notificationDocteur);
+            $em->flush();
+
 
             $jsonRendezVous = $serializer->serialize(
                 $rendezVous,
