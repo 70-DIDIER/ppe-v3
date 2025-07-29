@@ -180,6 +180,5 @@ class AppFixtures extends Fixture
 
         // Sauvegarde dans la base de données
         $manager->flush();
-        $manager->clear();
     }
 }
