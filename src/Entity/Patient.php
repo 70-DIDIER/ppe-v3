@@ -39,17 +39,18 @@ class Patient
      * @var Collection<int, RendezVous>
      */
     #[ORM\OneToMany(targetEntity: RendezVous::class, mappedBy: 'patient')]
-    #[Ignore]
+    #[Groups(["getPatient"])]
     private Collection $rendezVouses;
 
     /**
      * @var Collection<int, Notification>
      */
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'patient')]
-    #[Ignore]
+    #[Groups(["getNotification"])]
     private Collection $notifications;
 
     #[ORM\OneToOne(inversedBy: 'patient', cascade: ['persist', 'remove'])]
+    #[Groups(['patient:read'])]
     private ?User $user = null;
 
     public function __construct()

@@ -19,15 +19,15 @@ class Docteur
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getDocteur", "getRendezvous"])]
+    #[Groups(["getDocteur", "getRendezVous"])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getDocteur", "getRendezvous"])]
+    #[Groups(["getDocteur", "getRendezVous"])]
     private ?string $prenom = null;
 
     #[ORM\Column]
-    #[Groups(["getDocteur", "getRendezvous"])]
+    #[Groups(["getDocteur", "getRendezVous"])]
     private ?int $telephone = null;
 
     /**
@@ -48,8 +48,11 @@ class Docteur
      * @var Collection<int, Notification>
      */
     #[ORM\OneToMany(targetEntity: Notification::class, mappedBy: 'docteur')]
-    #[Ignore]
+    #[Groups(["getNotification"])]
     private Collection $notifications;
+
+    #[ORM\OneToOne(inversedBy: 'docteur', cascade: ['persist', 'remove'])]
+    private ?User $user = null;
 
     public function __construct()
     {
@@ -182,6 +185,18 @@ class Docteur
                 $notification->setDocteur(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
 
         return $this;
     }

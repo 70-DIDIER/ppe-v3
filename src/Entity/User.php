@@ -15,15 +15,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["getUser", "getPatient","getRendezvous"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(["getUser", "getPatient","getRendezvous"])]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
+    #[Groups(["getUser", "getPatient","getRendezvous"])]
     private array $roles = [];
 
     /**
@@ -31,9 +34,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column]
     private ?string $password = null;
+    #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
+    #[Groups(["getUser"])]
+    private ?Patient $patient = null;
 
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
-    private ?Patient $patient = null;
+    private ?Docteur $docteur = null;
 
     public function getId(): ?int
     {
@@ -127,6 +133,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         $this->patient = $patient;
+
+        return $this;
+    }
+
+    public function getDocteur(): ?Docteur
+    {
+        return $this->docteur;
+    }
+
+    public function setDocteur(?Docteur $docteur): static
+    {
+        // unset the owning side of the relation if necessary
+        if ($docteur === null && $this->docteur !== null) {
+            $this->docteur->setUser(null);
+        }
+
+        // set the owning side of the relation if necessary
+        if ($docteur !== null && $docteur->getUser() !== $this) {
+            $docteur->setUser($this);
+        }
+
+        $this->docteur = $docteur;
 
         return $this;
     }
