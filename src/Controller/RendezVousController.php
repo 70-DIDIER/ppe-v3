@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 final class RendezVousController extends AbstractController
@@ -33,93 +34,176 @@ final class RendezVousController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         DocteurRepository $docteurRepository,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        ValidatorInterface $validator
     ): JsonResponse {
+        // 1. Vérification de l'authentification
         $user = $this->getUser();
-
         if (!$user instanceof \App\Entity\User) {
-            return new JsonResponse(['error' => "L'utilisateur n'est pas reconnu comme un patient"], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(
+                ['error' => "Utilisateur non authentifié"],
+                Response::HTTP_UNAUTHORIZED
+            );
         }
 
+        // 2. Vérification du profil patient
         $patient = $user->getPatient();
-
         if (!$patient) {
-            return new JsonResponse(['error' => "Aucun profil patient lié à cet utilisateur"], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(
+                ['error' => "Aucun profil patient associé à ce compte"],
+                Response::HTTP_FORBIDDEN
+            );
         }
 
-        // Récupération des données JSON
+        // 3. Récupération et validation des données
         $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new JsonResponse(
+                ['error' => 'Données JSON invalides'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
 
-        // Validation des champs requis
-        $requiredFields = ['dateRendezVous', 'heureRendezVous', 'docteur'];
-        foreach ($requiredFields as $field) {
+        // 4. Validation des champs obligatoires
+        $requiredFields = [
+            'dateRendezVous' => 'Date du rendez-vous manquante',
+            'heureRendezVous' => 'Heure du rendez-vous manquante',
+            'docteur' => 'Docteur non spécifié'
+        ];
+
+        foreach ($requiredFields as $field => $errorMessage) {
             if (!isset($data[$field])) {
-                return new JsonResponse(['error' => 'Le champ "' . $field . '" est requis'], Response::HTTP_BAD_REQUEST);
+                return new JsonResponse(
+                    ['error' => $errorMessage],
+                    Response::HTTP_BAD_REQUEST
+                );
             }
         }
 
+        // 5. Validation du format de date
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['dateRendezVous'])) {
+            return new JsonResponse(
+                ['error' => 'Format de date invalide. Utilisez YYYY-MM-DD'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        // 6. Validation du format d'heure
+        if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $data['heureRendezVous'])) {
+            return new JsonResponse(
+                ['error' => "Format d'heure invalide. Utilisez HH:MM"],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        // 7. Recherche du docteur
         $docteur = $docteurRepository->find((int)$data['docteur']);
         if (!$docteur) {
-            return new JsonResponse(['error' => 'Docteur introuvable (ID: ' . $data['docteur'] . ')'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(
+                ['error' => 'Docteur introuvable'],
+                Response::HTTP_NOT_FOUND
+            );
         }
 
         try {
+            // 8. Création de l'objet DateTime
             $dateTime = \DateTime::createFromFormat(
-                'Y-m-d H:i:s',
+                'Y-m-d H:i',
                 $data['dateRendezVous'] . ' ' . $data['heureRendezVous']
             );
 
             if (!$dateTime) {
-                throw new \Exception('Format de date/heure invalide');
+                throw new \Exception('La combinaison date/heure est invalide');
             }
 
+            // 9. Création du rendez-vous
             $rendezVous = new RendezVous();
             $rendezVous->setDateConsultationAt(\DateTimeImmutable::createFromMutable($dateTime));
             $rendezVous->setHeureConsultation(\DateTimeImmutable::createFromMutable($dateTime));
             $rendezVous->setDescription($data['descriptionRendezVous'] ?? "Pas de description");
-            $rendezVous->setTypeConsultation($data['typeConsultation'] ?? "à l'hôpital");
-            $rendezVous->setStatut("en attente");
+            $rendezVous->setTypeConsultation($data['typeConsultation'] ?? "en_cabinet");
+            $rendezVous->setStatut("en_attente");
             $rendezVous->setDocteur($docteur);
             $rendezVous->setPatient($patient);
 
+            // 10. Validation de l'entité
+            $errors = $validator->validate($rendezVous);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[] = $error->getMessage();
+                }
+                return new JsonResponse(
+                    ['error' => $errorMessages],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            // 11. Persistance en base de données
             $em->persist($rendezVous);
             $em->flush();
 
-            // Notifier le patient
-            $message = "Votre demande de rendez-vous avec le Dr. " . $docteur->getNom() . " a été envoyée.";
-            $notification = new Notification();
-            $notification->setPatient($patient);
-            $notification->setMessage($message);
-            $notification->setDateHeureAt(new \DateTimeImmutable());
-            $notification->setType("demande_rendezVous");
-            $notification->setStatut(false);
-            $em->persist($notification);
-            $em->flush();
-
-            // notifier le docteur
-            $messageDocteur = "Vous avez une nouvelle demande de rendez-vous de la part de " . $patient->getUser()->getEmail() . ".";
-            $notificationDocteur = new Notification();
-            $notificationDocteur->setDocteur($docteur);
-            $notificationDocteur->setMessage($messageDocteur);
-            $notificationDocteur->setDateHeureAt(new \DateTimeImmutable());
-            $notificationDocteur->setType("demande_rendezVous");
-            $notificationDocteur->setStatut(false);
-            $em->persist($notificationDocteur);
-            $em->flush();
-
-
-            $jsonRendezVous = $serializer->serialize(
-                $rendezVous,
-                'json',
-                ['groups' => ['getRendezVous']]
+            // 12. Notification au patient
+            $this->createNotification(
+                $em,
+                $patient,
+                "Votre demande de rendez-vous avec le Dr. " . $docteur->getNom() . " a été envoyée.",
+                "demande_rendezVous"
             );
 
-            return new JsonResponse(['message' => 'Rendez-vous créé avec succès'], Response::HTTP_CREATED);
+            // 13. Notification au docteur
+            $this->createNotification(
+                $em,
+                null,
+                "Nouvelle demande de rendez-vous de " . $patient->getUser()->getEmail(),
+                "demande_rendezVous",
+                $docteur
+            );
+
+            // 14. Retour de la réponse
+            return new JsonResponse(
+                [
+                    'message' => 'Rendez-vous créé avec succès',
+                    'id' => $rendezVous->getId()
+                ],
+                Response::HTTP_CREATED
+            );
+
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur de traitement: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse(
+                ['error' => 'Erreur lors de la création: ' . $e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
         }
     }
 
+    /**
+     * Crée une notification
+     */
+    private function createNotification(
+        EntityManagerInterface $em,
+        $patient = null,
+        string $message,
+        string $type,
+        $docteur = null
+    ): void {
+        $notification = new Notification();
+        $notification->setMessage($message);
+        $notification->setDateHeureAt(new \DateTimeImmutable());
+        $notification->setType($type);
+        $notification->setStatut(false);
+
+        if ($patient) {
+            $notification->setPatient($patient);
+        }
+
+        if ($docteur) {
+            $notification->setDocteur($docteur);
+        }
+
+        $em->persist($notification);
+        $em->flush();
+    }
 
     #[Route('/api/rendezVous/{id}', name: "app_rendezvous_show", methods: ['GET'])]
     public function showRendezVous(RendezVous $rendezVous, SerializerInterface $serializer): JsonResponse
@@ -238,6 +322,4 @@ final class RendezVousController extends AbstractController
             ], 500);
         }
     }
-
-    
 }

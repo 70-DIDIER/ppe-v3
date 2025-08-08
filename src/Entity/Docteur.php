@@ -54,11 +54,18 @@ class Docteur
     #[ORM\OneToOne(inversedBy: 'docteur', cascade: ['persist', 'remove'])]
     private ?User $user = null;
 
+    /**
+     * @var Collection<int, Disponibilite>
+     */
+    #[ORM\OneToMany(targetEntity: Disponibilite::class, mappedBy: 'docteur', orphanRemoval: true)]
+    private Collection $disponibilites;
+
     public function __construct()
     {
         $this->specialites = new ArrayCollection();
         $this->rendezVouses = new ArrayCollection();
         $this->notifications = new ArrayCollection();
+        $this->disponibilites = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -197,6 +204,36 @@ class Docteur
     public function setUser(?User $user): static
     {
         $this->user = $user;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Disponibilite>
+     */
+    public function getDisponibilites(): Collection
+    {
+        return $this->disponibilites;
+    }
+
+    public function addDisponibilite(Disponibilite $disponibilite): static
+    {
+        if (!$this->disponibilites->contains($disponibilite)) {
+            $this->disponibilites->add($disponibilite);
+            $disponibilite->setDocteur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDisponibilite(Disponibilite $disponibilite): static
+    {
+        if ($this->disponibilites->removeElement($disponibilite)) {
+            // set the owning side to null (unless already changed)
+            if ($disponibilite->getDocteur() === $this) {
+                $disponibilite->setDocteur(null);
+            }
+        }
 
         return $this;
     }

@@ -29,6 +29,14 @@ class Specialite
     #[Ignore]
     private Collection $docteur;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(["getDocteur", "getSpecialite"])]
+    private ?string $description = null;
+
+    #[ORM\Column]
+    #[Groups(["getDocteur", "getSpecialite"])]
+    private ?bool $statut = null;
+
     public function __construct()
     {
         $this->docteur = new ArrayCollection();
@@ -71,6 +79,30 @@ class Specialite
     public function removeDocteur(Docteur $docteur): static
     {
         $this->docteur->removeElement($docteur);
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): static
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    public function isStatut(): ?bool
+    {
+        return $this->statut;
+    }
+
+    public function setStatut(bool $statut): static
+    {
+        $this->statut = $statut;
 
         return $this;
     }
